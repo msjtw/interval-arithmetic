@@ -1,0 +1,183 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+
+% Margins
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.0in
+\headsep=0.25in
+
+\title{%
+    Rozwiązywanie rówania nieliniowego \\
+    metodą Newtona Raphsona.}
+\author{ Stanisław Fiedler }
+\date{\today}
+
+\begin{document}
+\maketitle	
+
+\section{Zastosowanie}
+    Funkcja \verb|newton_raphson_i| znajduje przedział zawierający miejsce zerowe równania z zadaną dokładnością.
+\section{Opis metody}
+    Kolejne przybliżenia wartości miejsca zerowego fukcji za pomocą metody Newtona Raphsona wyznaczane są wzorem:
+    $$x_{i+1} = x_i - \frac{f'(x_i)+\sqrt[]{[f'(x_i)]^2-2f(x_i)f''(x_i)}}{f''(x_i)}, i = 0, 1, 2, ...$$
+    gdzie $x_0$ jest dana. 
+    Proces kończy się kiedy szerokość przedziału zawierającego dwa ostatnie przybilżenia jest miejsza od zadanego na początku $\varepsilon$.
+\section{Wywołanie funkcji}
+    \verb|newton_raphson_i(x, f, df, d2f ,mit, eps, fatx, it);|
+\section{Dane}
+    \begin{description}
+        \item[x] - początkowe przybliżenie miejsca zerowego.
+        \item[f] - wskaźnik do funkcji zwracającej wartość $f(x)$.
+        \item[df] - wskaźnik do funkcji zwracającej wartość $f'(x)$.
+        \item[d2f] - wskaźnik do funkcji zwracającej wartość $f''(x)$.
+        \item[mit] - maksymalna liczba iteracji.
+        \item[eps] - błąd wyzaczanego miejsca zerowego.
+    \end{description}
+\section{Wynik}
+    \begin{description}
+        \item[x] - wyznaczone przybliżenie miejsca zerowego.
+        \item[fatx] - wartość funkcji dla wyznaczonego miejsca zerowego.
+        \item[it] - ilość wykonanych iteracji.
+    \end{description}
+\section{Inne parametry}
+    Funkcja \verb|newton_raphson_i| zwraca status wykonia. 
+    Poszczególne wartości oznaczają:
+    \begin{itemize}
+        \item 1 - mit < 1.
+        \item 2 - dla pewnego x: $f''(x) = 0$.
+        \item 3 - w mit iteracjach nie osiągnięto dokładości eps.
+        \item 4 - dla pewnego x: $[f'(x)]^2 -2f(x)f''(x) < 0$
+        \item 0 - w innych przypadkach.
+    \end{itemize}
+\section{Typy parametrów}
+    \begin{description}
+        \item[Interval]: x, fatx; 
+        \item[Interval (*)(Interval)]: f, df, d2f;
+        \item[int]: mit, it;
+        \item[\_Float128]: eps;
+    \end{description}
+\section{Identyfikatory nielokalne}
+    \begin{description}
+        \item[Interval] - klasa wprowadzająca arytmetykę przedziałową.
+        \item[Interval (*)(Interval)] - fukcja przyjmująca jako jedyny argument i zwracająca obiekt klasy Interval.
+    \end{description}
+\pagebreak
+\section{Tekst funkcji}
+    \begin{verbatim}
+        int newton_raphson_i(Interval &x, Interval (*f)(Interval), 
+                    Interval (*df)(Interval), Interval (*d2f)(Interval),
+                    const int mit, const _Float128 eps, Interval &fatx, int &it){
+            int st;
+            Interval dfatx, d2fatx, p, v, w, xh, x1, x2, ret;
+        
+            if(mit < 1){
+                return 1;
+            }
+            st = 3;
+            it = 0;
+            do{
+                it++;
+                fatx = f(x);
+                dfatx = df(x);
+                d2fatx = d2f(x);
+                p = dfatx*dfatx - 2*fatx*d2fatx;
+                if(con_zero(d2fatx)){
+                    st = 2;
+                }
+                else if(neg(p)){
+                    st = 4;
+                }
+                else{
+                    xh = x;
+                    w = abs(xh);
+                    p = sqrt(p);
+                    x1 = x-(dfatx-p)/d2fatx;
+                    x2 = x-(dfatx+p)/d2fatx;
+                    if( make_intr(x2, xh).width() > make_intr(x1, xh).width() )
+                        x = x1;
+                    else 
+                        x = x2;
+                    ret = make_intr(x, xh);
+                    if( ret.width() < eps ){
+                        st = 0;
+                    }
+                }
+            } while(it < mit and st == 3);
+            if(st == 0 or st == 3){
+                x = ret;
+                fatx = f(x);
+            }
+            return st;
+        } 
+    \end{verbatim}
+
+\pagebreak
+\section{Przykłady}
+    \begin{enumerate}
+        \item Równanie
+        $$f(x) = x^3 - 3x -1$$
+        Dane:\\
+        \begin{tabular}{r|l}
+            
+            x:&-0.5\\
+            mit:&10\\
+            eps:&1e-16\\
+            \hline
+        \end{tabular}\\\\
+        Wyniki:\\
+        \begin{tabular}{r|l}
+            
+            x:&-3.47296355333860697703433253538629587230160763599116e-01\\
+            fx:&0.000e+00\\
+            it:&4\\
+            st:&0\\
+            \hline
+        \end{tabular}
+        \item Równanie
+        $$f(x) = x^3 - 3x -1$$
+        Dane:\\
+        \begin{tabular}{r|l}
+            
+            x:&[-0.5, -0.5]\\
+            mit:&10\\
+            eps:&1e-16\\
+            \hline
+        \end{tabular}\\\\
+        Wyniki:\\
+        \begin{tabular}{r|l}
+            
+            x:&[ -3.47296355333860697703433253782741063236497078931272e-01, \\
+              &-3.47296355333860697703433253538612783491395984966298e-01 ]\\
+            szerokość:&2.44128279745101093964974138431842897246009738490558e-28\\
+            fx:&[ -8.83808288514330339349461749863251854013475577315218e-29, \\
+              &7.32340639143079594832094780601746367656068766038846e-28 ]\\
+            szerokość:&8.20721467994512628767040955588071553057416323770368e-28\\
+            it:&4\\
+            st:&0\\
+            \hline
+        \end{tabular}
+        \item Równanie
+        $$f(x) = x^3 - 3x -1$$
+        Dane:\\
+        \begin{tabular}{r|l}
+            
+            x:&[-10, -10]\\
+            mit:&10\\
+            eps:&1e-16\\
+            \hline
+        \end{tabular}\\\\
+        Wyniki:\\
+        \begin{tabular}{r|l}
+            st:&4\\
+            \hline
+        \end{tabular}\\
+        dla pewnego x: $[f'(x)]^2 -2f(x)f''(x) < 0$
+    \end{enumerate}
+\pagebreak
+\tableofcontents
+\end{document}
